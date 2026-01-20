@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
@@ -16,8 +16,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Progress } from "@/components/ui/progress"
 import { Upload, Loader2, FileText, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { usePDFProcessor } from "@/lib/use-pdf-processor"
 
 interface UploadDialogProps {
   open: boolean
@@ -36,6 +38,7 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
     processNumber: "",
   })
   const { toast } = useToast()
+  const { status: pdfStatus, processFile, reset: resetPDFProcessor } = usePDFProcessor()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -72,13 +75,21 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
       // Criar um novo processo
       const processId = Date.now().toString()
       
-      // TODO: Aqui você implementará:
-      // 1. Upload do PDF para um servidor/storage
-      // 2. Extração de dados usando IA/OCR
-      // 3. Salvamento no banco de dados
-      
-      // Simular processamento
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Processar PDF em background (assíncrono)
+      toast({
+        title: "Processando PDF...",
+        description: "O PDF será processado automaticamente. Você já pode preencher outras informações.",
+      })
+
+      // Iniciar processamento assíncrono
+      processFile(selectedFile, processId).catch(err => {
+        console.error('Erro no processamento:', err)
+        toast({
+          title: "Aviso",
+          description: "Não foi possível extrair todos os dados do PDF. Preencha manualmente.",
+          variant: "destructive"
+        })
+      })
 
       // Salvar dados básicos no localStorage temporariamente
       const newProcess = {
@@ -95,8 +106,8 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
       localStorage.setItem('processes', JSON.stringify(existingProcesses))
 
       toast({
-        title: "Processo enviado com sucesso!",
-        description: "O processo está sendo processado. Você será redirecionado.",
+        title: "Processo criado!",
+        description: "PDF está sendo processado em segundo plano.",
       })
 
       // Limpar formulário
@@ -107,13 +118,13 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
         processNumber: "",
       })
       setSelectedFile(null)
+      resetPDFProcessor()
 
       onUploadSuccess()
+      onOpenChange(false)
       
       // Redirecionar para a página do processo
-      setTimeout(() => {
-        router.push(`/process/${processId}`)
-      }, 1000)
+      router.push(`/process/${processId}`)
 
     } catch (error) {
       console.error("Erro ao enviar processo:", error)
@@ -141,6 +152,17 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+            {/* Barra de progresso do PDF */}
+            {pdfStatus.status !== 'idle' && pdfStatus.status !== 'complete' && (
+              <div className="space-y-2 p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{pdfStatus.message}</span>
+                  <span className="text-muted-foreground">{pdfStatus.progress}%</span>
+                </div>
+                <Progress value={pdfStatus.progress} className="h-2" />
+              </div>
+            )}
+
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="title" className="text-xs sm:text-sm">
                 Título do Processo

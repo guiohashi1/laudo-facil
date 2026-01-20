@@ -4,44 +4,53 @@ import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ProcessProvider } from "@/lib/process-context"
 import { ProcessForm } from "@/components/forms/process-form"
+import { PDFProcessingStatus } from "@/components/pdf-processing-status"
 import { Header } from "@/components/header"
 import { LegalProcess } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Loader2 } from "lucide-react"
+import { loadFromLocalStorage, ProcessedPDFData } from "@/lib/use-pdf-processor"
 
 export default function ProcessPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const [process, setProcess] = useState<LegalProcess | null>(null)
+  const [pdfData, setPdfData] = useState<ProcessedPDFData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Carregar processo do backend/localStorage
+    // Carregar processo do localStorage
     const loadProcess = async () => {
       try {
+        // Carregar dados extraídos do PDF (se existirem)
+        const extractedData = loadFromLocalStorage(id)
+        if (extractedData) {
+          setPdfData(extractedData)
+        }
+        
         // Simular carregamento
         await new Promise(resolve => setTimeout(resolve, 500))
         
-        // Mock data para desenvolvimento
-        const mockProcess: LegalProcess = {
+        // Criar processo base
+        let mockProcess: LegalProcess = {
           id: id,
-          processNumber: "0000000-00.0000.0.00.0000",
+          processNumber: extractedData?.extractedData.processNumber || "0000000-00.0000.0.00.0000",
           status: "processing",
           createdAt: new Date(),
           updatedAt: new Date(),
           identification: {
-            laborCourt: "",
-            county: "",
-            processNumber: "",
-            judgeName: "",
+            laborCourt: extractedData?.extractedData.identification?.laborCourt || "",
+            county: extractedData?.extractedData.identification?.county || "",
+            processNumber: extractedData?.extractedData.processNumber || "",
+            judgeName: extractedData?.extractedData.identification?.judgeName || "",
             claimant: {
-              name: "",
-              cpf: "",
-              rg: "",
-              address: ""
+              name: extractedData?.extractedData.identification?.claimant?.name || "",
+              cpf: extractedData?.extractedData.identification?.claimant?.cpf || "",
+              rg: extractedData?.extractedData.identification?.claimant?.rg || "",
+              address: extractedData?.extractedData.identification?.claimant?.address || ""
             },
             company: {
-              name: "",
+              name: extractedData?.extractedData.identification?.company?.name || "",
               cnpj: "",
               address: ""
             }
@@ -149,6 +158,9 @@ export default function ProcessPage({ params }: { params: Promise<{ id: string }
               Voltar para lista
             </Button>
           </div>
+
+          {/* Status do processamento do PDF */}
+          <PDFProcessingStatus data={pdfData} />
 
           <ProcessForm
             process={process}

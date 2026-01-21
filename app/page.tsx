@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Upload } from "lucide-react"
 
 export default function HomePage() {
-  const [selectedProcessId, setSelectedProcessId] = useState<number | null>(null)
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const handleProcessSelect = (processId: number) => {
+  const handleProcessSelect = (processId: string) => {
     setSelectedProcessId(processId)
   }
 

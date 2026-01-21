@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress"
 import { Upload, Loader2, FileText, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { usePDFProcessor } from "@/lib/use-pdf-processor"
+import { ProcessStorage } from "@/lib/process-storage"
 
 interface UploadDialogProps {
   open: boolean
@@ -91,23 +92,22 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
         })
       })
 
-      // Salvar dados básicos no localStorage temporariamente
-      const newProcess = {
+      // Salvar dados básicos no localStorage usando ProcessStorage
+      ProcessStorage.save({
         id: processId,
-        ...formData,
+        title: formData.title,
+        patientName: formData.patientName,
+        diseaseType: formData.diseaseType,
+        processNumber: formData.processNumber,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         uploadDate: new Date().toISOString(),
         status: "processing"
-      }
-      
-      const existingProcesses = JSON.parse(localStorage.getItem('processes') || '[]')
-      existingProcesses.push(newProcess)
-      localStorage.setItem('processes', JSON.stringify(existingProcesses))
+      })
 
       toast({
         title: "Processo criado!",
-        description: "PDF está sendo processado em segundo plano.",
+        description: "Redirecionando para o processo...",
       })
 
       // Limpar formulário
@@ -120,11 +120,14 @@ export function UploadDialog({ open, onOpenChange, onUploadSuccess }: UploadDial
       setSelectedFile(null)
       resetPDFProcessor()
 
-      onUploadSuccess()
+      // Fechar o diálogo primeiro
       onOpenChange(false)
+      onUploadSuccess()
       
-      // Redirecionar para a página do processo
-      router.push(`/process/${processId}`)
+      // Redirecionar para a página do processo após um pequeno delay
+      setTimeout(() => {
+        router.push(`/process/${processId}`)
+      }, 100)
 
     } catch (error) {
       console.error("Erro ao enviar processo:", error)

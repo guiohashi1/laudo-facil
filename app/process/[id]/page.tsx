@@ -166,6 +166,7 @@ export default function ProcessPage({ params }: { params: Promise<{ id: string }
             process={process}
             onUpdate={handleUpdate}
             onSave={handleSave}
+            pdfData={pdfData}
           />
         </main>
       </div>

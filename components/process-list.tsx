@@ -9,23 +9,25 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Search, FileText, Filter, ExternalLink } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { mockProcesses, type LegalProcess } from "@/lib/mock-data"
+import { ProcessStorage, type StoredProcess } from "@/lib/process-storage"
 
 interface ProcessListProps {
-  onProcessSelect?: (processId: number) => void
-  selectedProcessId?: number | null
+  onProcessSelect?: (processId: string) => void
+  selectedProcessId?: string | number | null
   refreshTrigger?: number
   showOpenButton?: boolean
 }
 
 export function ProcessList({ onProcessSelect, selectedProcessId, refreshTrigger, showOpenButton = false }: ProcessListProps) {
   const router = useRouter()
-  const [processes, setProcesses] = useState<LegalProcess[]>(mockProcesses)
+  const [processes, setProcesses] = useState<StoredProcess[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
   useEffect(() => {
-    setProcesses(mockProcesses)
+    // Carregar processos do localStorage
+    const loadedProcesses = ProcessStorage.getAll()
+    setProcesses(loadedProcesses)
   }, [refreshTrigger])
 
   const filteredProcesses = processes.filter((process) => {
@@ -38,14 +40,39 @@ export function ProcessList({ onProcessSelect, selectedProcessId, refreshTrigger
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Pendente":
+      case "pending":
         return "secondary"
-      case "Processando":
+      case "processing":
         return "default"
-      case "Concluído":
+      case "completed":
         return "outline"
       default:
         return "secondary"
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Pendente"
+      case "processing":
+        return "Processando"
+      case "completed":
+        return "Concluído"
+      default:
+        return status
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    } catch {
+      return dateString
     }
   }
 
@@ -70,9 +97,9 @@ export function ProcessList({ onProcessSelect, selectedProcessId, refreshTrigger
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="Pendente">Pendente</SelectItem>
-              <SelectItem value="Processando">Processando</SelectItem>
-              <SelectItem value="Concluído">Concluído</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="processing">Processando</SelectItem>
+              <SelectItem value="completed">Concluído</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -108,9 +135,9 @@ export function ProcessList({ onProcessSelect, selectedProcessId, refreshTrigger
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">{process.patientName}</p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={getStatusVariant(process.status)} className="text-xs">
-                    {process.status}
+                    {getStatusLabel(process.status)}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">{process.uploadDate}</span>
+                  <span className="text-xs text-muted-foreground">{formatDate(process.uploadDate)}</span>
                 </div>
               </div>
               {showOpenButton && (
@@ -137,8 +164,14 @@ export function ProcessList({ onProcessSelect, selectedProcessId, refreshTrigger
             <Search className="h-8 w-8 text-muted-foreground" />
           </div>
           <div className="space-y-1">
-            <p className="font-medium text-sm text-foreground">Nenhum processo encontrado</p>
-            <p className="text-xs text-muted-foreground">Tente ajustar os filtros de busca</p>
+            <p className="font-medium text-sm text-foreground">
+              {processes.length === 0 ? "Nenhum processo cadastrado" : "Nenhum processo encontrado"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {processes.length === 0 
+                ? "Clique em 'Novo Processo' para começar" 
+                : "Tente ajustar os filtros de busca"}
+            </p>
           </div>
         </div>
       )}
